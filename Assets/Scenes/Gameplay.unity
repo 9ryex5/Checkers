@@ -166,7 +166,7 @@ GameObject:
   - component: {fileID: 519420031}
   - component: {fileID: 519420029}
   m_Layer: 0
-  m_Name: Main Camera
+  m_Name: MainCamera
   m_TagString: MainCamera
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -294,10 +294,12 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: df7c8269ea6238b43ba69956c945862b, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  myCamera: {fileID: 519420031}
   prefabCellWhite: {fileID: 6470634661526235091, guid: 93b8daeb26726b7438ebf93999b4d4bb, type: 3}
   prefabCellBlack: {fileID: 7449012044414756166, guid: fbb5f10e63418a24d9fe463e6ef4b7e8, type: 3}
   prefabPieceWhite: {fileID: 4394064156875026399, guid: 0ea7c53cd05108a44b11e4744272576d, type: 3}
   prefabPieceBlack: {fileID: 4684737539420367478, guid: aff9bbd107c65b24886a8c47645eafe3, type: 3}
+  prefabPossibleMove: {fileID: 712994008617781049, guid: 60adb671395907c40994ab8e50b36c94, type: 3}
   parentBoard: {fileID: 239462484}
   parentPieces: {fileID: 1322677846}
 --- !u!114 &624440059
@@ -312,7 +314,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 3cc26e2e1552dfe4f8a896159af3dc84, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  boardSize: 10
+  boardSize: 8
 --- !u!1 &1322677845
 GameObject:
   m_ObjectHideFlags: 0
