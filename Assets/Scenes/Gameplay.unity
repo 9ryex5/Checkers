@@ -123,6 +123,36 @@ NavMeshSettings:
     debug:
       m_Flags: 0
   m_NavMeshData: {fileID: 0}
+--- !u!1 &24430769
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 24430770}
+  m_Layer: 0
+  m_Name: Previews
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &24430770
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 24430769}
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 2.9700348, y: 3.8947887, z: -0.7080272}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_RootOrder: 3
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &239462483
 GameObject:
   m_ObjectHideFlags: 0
@@ -299,9 +329,10 @@ MonoBehaviour:
   prefabCellBlack: {fileID: 7449012044414756166, guid: fbb5f10e63418a24d9fe463e6ef4b7e8, type: 3}
   prefabPieceWhite: {fileID: 4394064156875026399, guid: 0ea7c53cd05108a44b11e4744272576d, type: 3}
   prefabPieceBlack: {fileID: 4684737539420367478, guid: aff9bbd107c65b24886a8c47645eafe3, type: 3}
-  prefabPossibleMove: {fileID: 712994008617781049, guid: 60adb671395907c40994ab8e50b36c94, type: 3}
+  prefabPreviewMove: {fileID: 712994008617781049, guid: 60adb671395907c40994ab8e50b36c94, type: 3}
   parentBoard: {fileID: 239462484}
   parentPieces: {fileID: 1322677846}
+  parentPreviews: {fileID: 24430770}
 --- !u!114 &624440059
 MonoBehaviour:
   m_ObjectHideFlags: 0

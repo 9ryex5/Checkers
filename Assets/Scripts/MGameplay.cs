@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using UnityEngine;
 
 public class MGameplay : MonoBehaviour
@@ -7,13 +8,23 @@ public class MGameplay : MonoBehaviour
 
     public GameObject prefabCellWhite, prefabCellBlack;
     public GameObject prefabPieceWhite, prefabPieceBlack;
-    public GameObject prefabPossibleMove;
+    public GameObject prefabPreviewMove;
 
     public Transform parentBoard;
     public Transform parentPieces;
+    public Transform parentPreviews;
 
     private Cell[,] board;
-    private enum Cell { EMPTY, PW, PB }
+    private Vector2Int selectedPiecePos;
+    private List<Vector2Int> previewCellsPos;
+
+    private struct Cell
+    {
+        public Transform pieceTransform;
+        public bool isPieceBlack;
+        public bool isPieceKing;
+        public bool isPreview;
+    }
 
     private bool blackTurn;
 
@@ -31,16 +42,29 @@ public class MGameplay : MonoBehaviour
         {
             float x = myCamera.ScreenToWorldPoint(Input.mousePosition).x;
             float y = myCamera.ScreenToWorldPoint(Input.mousePosition).y;
-            Vector2Int currentCell = new Vector2Int(Mathf.RoundToInt(x), Mathf.RoundToInt(y));
+            Vector2Int target = new Vector2Int(Mathf.RoundToInt(x), Mathf.RoundToInt(y));
 
-            if (IsCellBoard(currentCell) && (board[currentCell.x, currentCell.y] == Cell.PW && !blackTurn || board[currentCell.x, currentCell.y] == Cell.PB && blackTurn))
-                SelectPiece(currentCell.x, currentCell.y);
+            if (IsCellBoard(target))
+            {
+                if (board[target.x, target.y].isPreview)
+                {
+                    Move(target.x, target.y);
+                    DeselectPiece();
+                }
+
+                else if ((board[target.x, target.y].pieceTransform != null && board[target.x, target.y].isPieceBlack == blackTurn))
+                {
+                    DeselectPiece();
+                    SelectPiece(target.x, target.y);
+                }
+            }
         }
     }
 
     private void DrawBoard()
     {
         board = new Cell[Settings.S.boardSize, Settings.S.boardSize];
+        previewCellsPos = new List<Vector2Int>();
 
         bool evenRow = false;
         bool evenLine = false;
@@ -55,14 +79,16 @@ public class MGameplay : MonoBehaviour
 
                     if (y < Settings.S.boardSize / 2 - 1)
                     {
-                        Instantiate(prefabPieceWhite, new Vector2(x, y), Quaternion.identity, parentPieces);
-                        board[x, y] = Cell.PW;
+                        Transform t = Instantiate(prefabPieceWhite, new Vector2(x, y), Quaternion.identity, parentPieces).transform;
+                        board[x, y].pieceTransform = t;
+                        board[x, y].isPieceBlack = false;
                     }
 
                     if (y > Settings.S.boardSize / 2)
                     {
-                        Instantiate(prefabPieceBlack, new Vector2(x, y), Quaternion.identity, parentPieces);
-                        board[x, y] = Cell.PB;
+                        Transform t = Instantiate(prefabPieceBlack, new Vector2(x, y), Quaternion.identity, parentPieces).transform;
+                        board[x, y].pieceTransform = t;
+                        board[x, y].isPieceBlack = true;
                     }
                 }
                 else
@@ -79,22 +105,105 @@ public class MGameplay : MonoBehaviour
 
     private void SelectPiece(int _x, int _y)
     {
+        Vector2Int target = Vector2Int.zero;
+
         if (blackTurn)
         {
-            if (IsCellBoard(new Vector2Int(_x - 1, _y - 1)))
-                Instantiate(prefabPossibleMove, new Vector2(_x - 1, _y - 1), Quaternion.identity);
+            target = new Vector2Int(_x - 1, _y - 1);
+            if (IsCellBoard(target))
+            {
+                if (board[target.x, target.y].pieceTransform == null)
+                {
+                    PreviewCell(target);
+                }
+                else if (board[target.x, target.y].isPieceBlack != blackTurn)
+                {
+                    target = new Vector2Int(_x - 2, _y - 2);
+                    if (IsCellBoard(target) && board[target.x, target.y].pieceTransform == null)
+                        PreviewCell(target);
+                }
+            }
 
-            if (IsCellBoard(new Vector2Int(_x + 1, _y - 1)))
-                Instantiate(prefabPossibleMove, new Vector2(_x + 1, _y - 1), Quaternion.identity);
+            target = new Vector2Int(_x + 1, _y - 1);
+            if (IsCellBoard(target))
+            {
+                if (board[target.x, target.y].pieceTransform == null)
+                {
+                    PreviewCell(target);
+                }
+                else if (board[target.x, target.y].isPieceBlack != blackTurn)
+                {
+                    target = new Vector2Int(_x + 2, _y - 2);
+                    if (IsCellBoard(target) && board[target.x, target.y].pieceTransform == null)
+                        PreviewCell(target);
+                }
+            }
         }
         else
         {
-            if (IsCellBoard(new Vector2Int(_x - 1, _y + 1)))
-                Instantiate(prefabPossibleMove, new Vector2(_x - 1, _y + 1), Quaternion.identity);
+            target = new Vector2Int(_x - 1, _y + 1);
+            if (IsCellBoard(target))
+            {
+                if (board[target.x, target.y].pieceTransform == null)
+                {
+                    PreviewCell(target);
+                }
+                else if (board[target.x, target.y].isPieceBlack != blackTurn)
+                {
+                    target = new Vector2Int(_x - 2, _y + 2);
+                    if (IsCellBoard(target) && board[target.x, target.y].pieceTransform == null)
+                        PreviewCell(target);
+                }
+            }
 
-            if (IsCellBoard(new Vector2Int(_x + 1, _y + 1)))
-                Instantiate(prefabPossibleMove, new Vector2(_x + 1, _y + 1), Quaternion.identity);
+            target = new Vector2Int(_x + 1, _y + 1);
+            if (IsCellBoard(target))
+            {
+                if (board[target.x, target.y].pieceTransform == null)
+                {
+                    PreviewCell(target);
+                }
+                else if (board[target.x, target.y].isPieceBlack != blackTurn)
+                {
+                    target = new Vector2Int(_x + 2, _y + 2);
+                    if (IsCellBoard(target) && board[target.x, target.y].pieceTransform == null)
+                        PreviewCell(target);
+                }
+            }
         }
+
+        selectedPiecePos = new Vector2Int(_x, _y);
+    }
+
+    private void PreviewCell(Vector2Int _target)
+    {
+        Instantiate(prefabPreviewMove, (Vector2)_target, Quaternion.identity, parentPreviews);
+        board[_target.x, _target.y].isPreview = true;
+        previewCellsPos.Add(_target);
+    }
+
+    private void DeselectPiece()
+    {
+        for (int i = 0; i < previewCellsPos.Count; i++)
+            board[previewCellsPos[i].x, previewCellsPos[i].y].isPreview = false;
+
+        previewCellsPos = new List<Vector2Int>();
+
+        for (int i = 0; i < parentPreviews.childCount; i++)
+            Destroy(parentPreviews.GetChild(i).gameObject);
+    }
+
+    private void Move(int _toX, int _toY)
+    {
+        if (Mathf.Abs(_toY - selectedPiecePos.y) > 1)
+            Destroy(board[(_toX + selectedPiecePos.x) / 2, (_toY + selectedPiecePos.y) / 2].pieceTransform.gameObject);
+
+        board[_toX, _toY].pieceTransform = board[selectedPiecePos.x, selectedPiecePos.y].pieceTransform;
+        board[_toX, _toY].isPieceBlack = board[selectedPiecePos.x, selectedPiecePos.y].isPieceBlack;
+        board[selectedPiecePos.x, selectedPiecePos.y].pieceTransform.position = new Vector2(_toX, _toY);
+        board[selectedPiecePos.x, selectedPiecePos.y].pieceTransform = null;
+
+        blackTurn = !blackTurn;
     }
 
     private bool IsCellBoard(Vector2Int _cell)
