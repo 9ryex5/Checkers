@@ -27,6 +27,7 @@ public class MGameplay : MonoBehaviour
     }
 
     private bool blackTurn;
+    private bool canCapture;
 
     private void Start()
     {
@@ -105,6 +106,25 @@ public class MGameplay : MonoBehaviour
 
     private void SelectPiece(int _x, int _y)
     {
+        List<Vector2Int> moves = PossibleMoves(_x, _y);
+
+        if (Settings.S.mandatoryCapture && canCapture)
+        {
+            for (int i = 0; i < moves.Count; i++)
+                if (IsMoveCapture(_x, _y, moves[i].x, moves[i].y)) PreviewCell(moves[i]);
+        }
+        else
+        {
+            for (int i = 0; i < moves.Count; i++)
+                PreviewCell(moves[i]);
+        }
+
+        selectedPiecePos = new Vector2Int(_x, _y);
+    }
+
+    private List<Vector2Int> PossibleMoves(int _x, int _y)
+    {
+        List<Vector2Int> moves = new List<Vector2Int>();
         Vector2Int target = Vector2Int.zero;
 
         if (blackTurn)
@@ -114,13 +134,13 @@ public class MGameplay : MonoBehaviour
             {
                 if (board[target.x, target.y].pieceTransform == null)
                 {
-                    PreviewCell(target);
+                    moves.Add(target);
                 }
-                else if (board[target.x, target.y].isPieceBlack != blackTurn)
+                else if (board[target.x, target.y].pieceTransform != null && board[target.x, target.y].isPieceBlack != blackTurn)
                 {
                     target = new Vector2Int(_x - 2, _y - 2);
                     if (IsCellBoard(target) && board[target.x, target.y].pieceTransform == null)
-                        PreviewCell(target);
+                        moves.Add(target);
                 }
             }
 
@@ -129,13 +149,13 @@ public class MGameplay : MonoBehaviour
             {
                 if (board[target.x, target.y].pieceTransform == null)
                 {
-                    PreviewCell(target);
+                    moves.Add(target);
                 }
-                else if (board[target.x, target.y].isPieceBlack != blackTurn)
+                else if (board[target.x, target.y].pieceTransform != null && board[target.x, target.y].isPieceBlack != blackTurn)
                 {
                     target = new Vector2Int(_x + 2, _y - 2);
                     if (IsCellBoard(target) && board[target.x, target.y].pieceTransform == null)
-                        PreviewCell(target);
+                        moves.Add(target);
                 }
             }
         }
@@ -146,13 +166,13 @@ public class MGameplay : MonoBehaviour
             {
                 if (board[target.x, target.y].pieceTransform == null)
                 {
-                    PreviewCell(target);
+                    moves.Add(target);
                 }
-                else if (board[target.x, target.y].isPieceBlack != blackTurn)
+                else if (board[target.x, target.y].pieceTransform != null && board[target.x, target.y].isPieceBlack != blackTurn)
                 {
                     target = new Vector2Int(_x - 2, _y + 2);
                     if (IsCellBoard(target) && board[target.x, target.y].pieceTransform == null)
-                        PreviewCell(target);
+                        moves.Add(target);
                 }
             }
 
@@ -161,18 +181,18 @@ public class MGameplay : MonoBehaviour
             {
                 if (board[target.x, target.y].pieceTransform == null)
                 {
-                    PreviewCell(target);
+                    moves.Add(target);
                 }
-                else if (board[target.x, target.y].isPieceBlack != blackTurn)
+                else if (board[target.x, target.y].pieceTransform != null && board[target.x, target.y].isPieceBlack != blackTurn)
                 {
                     target = new Vector2Int(_x + 2, _y + 2);
                     if (IsCellBoard(target) && board[target.x, target.y].pieceTransform == null)
-                        PreviewCell(target);
+                        moves.Add(target);
                 }
             }
         }
 
-        selectedPiecePos = new Vector2Int(_x, _y);
+        return moves;
     }
 
     private void PreviewCell(Vector2Int _target)
@@ -193,17 +213,59 @@ public class MGameplay : MonoBehaviour
             Destroy(parentPreviews.GetChild(i).gameObject);
     }
 
+    private bool IsMoveCapture(int _fromX, int _fromY, int _toX, int _toY)
+    {
+        for (int i = 1; i < Mathf.Abs(_toY - _fromY); i++)
+            if (board[_fromX + (_fromX < _toX ? i : -i), _fromY + (_fromY < _toY ? i : -i)].isPieceBlack != blackTurn) return true;
+
+        return false;
+    }
+
     private void Move(int _toX, int _toY)
     {
-        if (Mathf.Abs(_toY - selectedPiecePos.y) > 1)
+        bool playAgain = false;
+
+        if (IsMoveCapture(selectedPiecePos.x, selectedPiecePos.y, _toX, _toY))
+        {
             Destroy(board[(_toX + selectedPiecePos.x) / 2, (_toY + selectedPiecePos.y) / 2].pieceTransform.gameObject);
+
+            List<Vector2Int> movesAfterCapture = PossibleMoves(_toX, _toY);
+
+            for (int i = 0; i < movesAfterCapture.Count; i++)
+                if (IsMoveCapture(_toX, _toY, movesAfterCapture[i].x, movesAfterCapture[i].y)) playAgain = true;
+        }
 
         board[_toX, _toY].pieceTransform = board[selectedPiecePos.x, selectedPiecePos.y].pieceTransform;
         board[_toX, _toY].isPieceBlack = board[selectedPiecePos.x, selectedPiecePos.y].isPieceBlack;
         board[selectedPiecePos.x, selectedPiecePos.y].pieceTransform.position = new Vector2(_toX, _toY);
         board[selectedPiecePos.x, selectedPiecePos.y].pieceTransform = null;
 
+        if (!playAgain) ChangeTurn();
+    }
+
+    private void ChangeTurn()
+    {
         blackTurn = !blackTurn;
+        canCapture = false;
+        if (Settings.S.mandatoryCapture) CheckCanCapture();
+    }
+
+    private void CheckCanCapture()
+    {
+        for (int y = 0; y < Settings.S.boardSize; y++)
+            for (int x = 0; x < Settings.S.boardSize; x++)
+                if (board[x, y].pieceTransform != null && board[x, y].isPieceBlack == blackTurn)
+                {
+                    List<Vector2Int> moves = PossibleMoves(x, y);
+                    foreach (Vector2Int v in moves)
+                    {
+                        if (IsMoveCapture(x, y, v.x, v.y))
+                        {
+                            canCapture = true;
+                            return;
+                        }
+                    }
+                }
     }
 
     private bool IsCellBoard(Vector2Int _cell)
