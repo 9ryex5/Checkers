@@ -1,14 +1,16 @@
 using System.Collections.Generic;
 using UnityEngine;
 
-public class MGameplay : MonoBehaviour
+public class ManagerGameplay : MonoBehaviour
 {
+    public static ManagerGameplay MG;
 
     public Camera myCamera;
 
     public GameObject prefabCellWhite, prefabCellBlack;
     public GameObject prefabPieceWhite, prefabPieceBlack;
     public GameObject prefabPreviewMove;
+    public GameObject prefabKing;
 
     public Transform parentBoard;
     public Transform parentPieces;
@@ -28,17 +30,25 @@ public class MGameplay : MonoBehaviour
 
     private bool blackTurn;
     private bool canCapture;
+    private bool isPlaying;
+
+    private void Awake()
+    {
+        MG = this;
+    }
 
     private void Start()
     {
         myCamera.transform.position = new Vector3(Settings.S.boardSize / 2 - 0.5f, Settings.S.boardSize / 2 - 0.5f, -1);
         myCamera.orthographicSize = Settings.S.boardSize / 2;
 
-        DrawBoard();
+        RestartMatch();
     }
 
     private void Update()
     {
+        if (!isPlaying) return;
+
         if (Input.GetMouseButtonDown(0))
         {
             float x = myCamera.ScreenToWorldPoint(Input.mousePosition).x;
@@ -50,7 +60,6 @@ public class MGameplay : MonoBehaviour
                 if (board[target.x, target.y].isPreview)
                 {
                     Move(target.x, target.y);
-                    DeselectPiece();
                 }
 
                 else if ((board[target.x, target.y].pieceTransform != null && board[target.x, target.y].isPieceBlack == blackTurn))
@@ -60,6 +69,22 @@ public class MGameplay : MonoBehaviour
                 }
             }
         }
+    }
+
+    public void RestartMatch()
+    {
+        ClearBoard();
+        DrawBoard();
+        isPlaying = true;
+        blackTurn = false;
+        canCapture = false;
+        ManagerUI.MUI.UpdateTurn(false);
+    }
+
+    private void ClearBoard()
+    {
+        for (int i = 0; i < parentPieces.childCount; i++)
+            Destroy(parentPieces.GetChild(i).gameObject);
     }
 
     private void DrawBoard()
@@ -127,72 +152,98 @@ public class MGameplay : MonoBehaviour
         List<Vector2Int> moves = new List<Vector2Int>();
         Vector2Int target = Vector2Int.zero;
 
-        if (blackTurn)
+        if (Settings.S.flyingKing && board[_x, _y].isPieceKing)
         {
-            target = new Vector2Int(_x - 1, _y - 1);
-            if (IsCellBoard(target))
+            for (int i = 1; i < Settings.S.boardSize - 1; i++)
             {
-                if (board[target.x, target.y].pieceTransform == null)
-                {
-                    moves.Add(target);
-                }
-                else if (board[target.x, target.y].pieceTransform != null && board[target.x, target.y].isPieceBlack != blackTurn)
-                {
-                    target = new Vector2Int(_x - 2, _y - 2);
-                    if (IsCellBoard(target) && board[target.x, target.y].pieceTransform == null)
-                        moves.Add(target);
-                }
+                //Left
+                if (IsPossibleSimple(_x - i, _y + (blackTurn ? -i : i)))
+                    moves.Add(new Vector2Int(_x - i, _y + (blackTurn ? -i : i)));
+                else if (IsPossibleCapture(_x - i, _y + (blackTurn ? -i : i), _x - i - 1, _y + (blackTurn ? -i - 1 : i + 1)))
+                    moves.Add(new Vector2Int(_x - i - 1, _y + (blackTurn ? -i - 1 : i + 1)));
+                else
+                    break;
             }
 
-            target = new Vector2Int(_x + 1, _y - 1);
-            if (IsCellBoard(target))
+            for (int i = 1; i < Settings.S.boardSize - 1; i++)
             {
-                if (board[target.x, target.y].pieceTransform == null)
-                {
-                    moves.Add(target);
-                }
-                else if (board[target.x, target.y].pieceTransform != null && board[target.x, target.y].isPieceBlack != blackTurn)
-                {
-                    target = new Vector2Int(_x + 2, _y - 2);
-                    if (IsCellBoard(target) && board[target.x, target.y].pieceTransform == null)
-                        moves.Add(target);
-                }
+                //Right
+                if (IsPossibleSimple(_x + i, _y + (blackTurn ? -i : i)))
+                    moves.Add(new Vector2Int(_x + i, _y + (blackTurn ? -i : i)));
+                else if (IsPossibleCapture(_x + i, _y + (blackTurn ? -i : i), _x - i - 1, _y + (blackTurn ? -i - 1 : i + 1)))
+                    moves.Add(new Vector2Int(_x + i + 1, _y + (blackTurn ? -i - 1 : i + 1)));
+                else
+                    break;
             }
+
+            for (int i = 1; i < Settings.S.boardSize - 1; i++)
+            {
+                //Left
+                if (IsPossibleSimple(_x - i, _y + (!blackTurn ? -i : i)))
+                    moves.Add(new Vector2Int(_x - i, _y + (!blackTurn ? -i : i)));
+                else if (IsPossibleCapture(_x - i, _y + (!blackTurn ? -i : i), _x - i - 1, _y + (!blackTurn ? -i - 1 : i + 1)))
+                    moves.Add(new Vector2Int(_x - i - 1, _y + (!blackTurn ? -i - 1 : i + 1)));
+                else
+                    break;
+            }
+
+            for (int i = 1; i < Settings.S.boardSize - 1; i++)
+            {
+                //Right
+                if (IsPossibleSimple(_x + i, _y + (!blackTurn ? -i : i)))
+                    moves.Add(new Vector2Int(_x + i, _y + (!blackTurn ? -i : i)));
+                else if (IsPossibleCapture(_x + i, _y + (!blackTurn ? -i : i), _x - i - 1, _y + (!blackTurn ? -i - 1 : i + 1)))
+                    moves.Add(new Vector2Int(_x + i + 1, _y + (!blackTurn ? -i - 1 : i + 1)));
+                else
+                    break;
+            }
+            foreach (Vector2Int v in moves)
+            {
+                Debug.Log("x" + v.x + "y" + v.y);
+            }
+            return moves;
         }
-        else
-        {
-            target = new Vector2Int(_x - 1, _y + 1);
-            if (IsCellBoard(target))
-            {
-                if (board[target.x, target.y].pieceTransform == null)
-                {
-                    moves.Add(target);
-                }
-                else if (board[target.x, target.y].pieceTransform != null && board[target.x, target.y].isPieceBlack != blackTurn)
-                {
-                    target = new Vector2Int(_x - 2, _y + 2);
-                    if (IsCellBoard(target) && board[target.x, target.y].pieceTransform == null)
-                        moves.Add(target);
-                }
-            }
 
-            target = new Vector2Int(_x + 1, _y + 1);
-            if (IsCellBoard(target))
-            {
-                if (board[target.x, target.y].pieceTransform == null)
-                {
-                    moves.Add(target);
-                }
-                else if (board[target.x, target.y].pieceTransform != null && board[target.x, target.y].isPieceBlack != blackTurn)
-                {
-                    target = new Vector2Int(_x + 2, _y + 2);
-                    if (IsCellBoard(target) && board[target.x, target.y].pieceTransform == null)
-                        moves.Add(target);
-                }
-            }
+        //Left
+        if (IsPossibleSimple(_x - 1, _y + (blackTurn ? -1 : 1))) moves.Add(new Vector2Int(_x - 1, _y + (blackTurn ? -1 : 1)));
+        if (IsPossibleCapture(_x - 1, _y + (blackTurn ? -1 : 1), _x - 2, _y + (blackTurn ? -2 : 2))) moves.Add(new Vector2Int(_x - 2, _y + (blackTurn ? -2 : 2)));
+        //Right
+        if (IsPossibleSimple(_x + 1, _y + (blackTurn ? -1 : 1))) moves.Add(new Vector2Int(_x + 1, _y + (blackTurn ? -1 : 1)));
+        if (IsPossibleCapture(_x + 1, _y + (blackTurn ? -1 : 1), _x + 2, _y + (blackTurn ? -2 : 2))) moves.Add(new Vector2Int(_x + 2, _y + (blackTurn ? -2 : 2)));
+
+        if (board[_x, _y].isPieceKing)
+        {
+            //Left
+            if (IsPossibleSimple(_x - 1, _y + (!blackTurn ? -1 : 1))) moves.Add(new Vector2Int(_x - 1, _y + (!blackTurn ? -1 : 1)));
+            if (IsPossibleCapture(_x - 1, _y + (!blackTurn ? -1 : 1), _x - 2, _y + (!blackTurn ? -2 : 2))) moves.Add(new Vector2Int(_x - 2, _y + (!blackTurn ? -2 : 2)));
+            //Right
+            if (IsPossibleSimple(_x + 1, _y + (!blackTurn ? -1 : 1))) moves.Add(new Vector2Int(_x + 1, _y + (!blackTurn ? -1 : 1)));
+            if (IsPossibleCapture(_x + 1, _y + (!blackTurn ? -1 : 1), _x + 2, _y + (!blackTurn ? -2 : 2))) moves.Add(new Vector2Int(_x + 2, _y + (!blackTurn ? -2 : 2)));
         }
 
         return moves;
+    }
+
+    private bool IsPossibleSimple(int _x, int _y)
+    {
+        Vector2Int target = new Vector2Int(_x, _y);
+        if (IsCellBoard(target) && board[target.x, target.y].pieceTransform == null)
+            return true;
+
+        return false;
+    }
+
+    private bool IsPossibleCapture(int _stepX, int _stepY, int _landX, int _landY)
+    {
+        Vector2Int target = new Vector2Int(_stepX, _stepY);
+        if (IsCellBoard(target) && board[target.x, target.y].pieceTransform != null && board[target.x, target.y].isPieceBlack != blackTurn)
+        {
+            target = new Vector2Int(_landX, _landY);
+            if (IsCellBoard(target) && board[target.x, target.y].pieceTransform == null)
+                return true;
+        }
+
+        return false;
     }
 
     private void PreviewCell(Vector2Int _target)
@@ -225,9 +276,16 @@ public class MGameplay : MonoBehaviour
     {
         bool playAgain = false;
 
+        board[_toX, _toY].pieceTransform = board[selectedPiecePos.x, selectedPiecePos.y].pieceTransform;
+        board[_toX, _toY].isPieceBlack = board[selectedPiecePos.x, selectedPiecePos.y].isPieceBlack;
+        board[_toX, _toY].isPieceKing = board[selectedPiecePos.x, selectedPiecePos.y].isPieceKing;
+        board[selectedPiecePos.x, selectedPiecePos.y].pieceTransform.position = new Vector2(_toX, _toY);
+        board[selectedPiecePos.x, selectedPiecePos.y].pieceTransform = null;
+
         if (IsMoveCapture(selectedPiecePos.x, selectedPiecePos.y, _toX, _toY))
         {
             Destroy(board[(_toX + selectedPiecePos.x) / 2, (_toY + selectedPiecePos.y) / 2].pieceTransform.gameObject);
+            board[(_toX + selectedPiecePos.x) / 2, (_toY + selectedPiecePos.y) / 2].pieceTransform = null;
 
             List<Vector2Int> movesAfterCapture = PossibleMoves(_toX, _toY);
 
@@ -235,19 +293,42 @@ public class MGameplay : MonoBehaviour
                 if (IsMoveCapture(_toX, _toY, movesAfterCapture[i].x, movesAfterCapture[i].y)) playAgain = true;
         }
 
-        board[_toX, _toY].pieceTransform = board[selectedPiecePos.x, selectedPiecePos.y].pieceTransform;
-        board[_toX, _toY].isPieceBlack = board[selectedPiecePos.x, selectedPiecePos.y].isPieceBlack;
-        board[selectedPiecePos.x, selectedPiecePos.y].pieceTransform.position = new Vector2(_toX, _toY);
-        board[selectedPiecePos.x, selectedPiecePos.y].pieceTransform = null;
+        if (_toY == (blackTurn ? 0 : Settings.S.boardSize - 1)) Promote(_toX, _toY);
 
-        if (!playAgain) ChangeTurn();
+        DeselectPiece();
+
+        if (playAgain) SelectPiece(_toX, _toY);
+        else ChangeTurn();
+    }
+
+    private void Promote(int _x, int _y)
+    {
+        Instantiate(prefabKing, new Vector2(_x, _y), Quaternion.identity, board[_x, _y].pieceTransform);
+        board[_x, _y].isPieceKing = true;
     }
 
     private void ChangeTurn()
     {
         blackTurn = !blackTurn;
+
+        if (CheckWin()) return;
+
         canCapture = false;
         if (Settings.S.mandatoryCapture) CheckCanCapture();
+        ManagerUI.MUI.UpdateTurn(blackTurn);
+    }
+
+    private bool CheckWin()
+    {
+        for (int y = 0; y < Settings.S.boardSize; y++)
+            for (int x = 0; x < Settings.S.boardSize; x++)
+                if (board[x, y].pieceTransform != null && board[x, y].isPieceBlack == blackTurn)
+                    return false;
+
+        isPlaying = false;
+        ManagerUI.MUI.Win(!blackTurn);
+
+        return true;
     }
 
     private void CheckCanCapture()
