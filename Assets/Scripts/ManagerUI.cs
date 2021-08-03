@@ -27,6 +27,7 @@ public class ManagerUI : MonoBehaviour
     public void Win(bool _black)
     {
         textWin.text = _black ? "Black Wins!" : "White Wins!";
+        textWin.gameObject.SetActive(true);
         buttonRestart.gameObject.SetActive(true);
     }
 

@@ -152,6 +152,7 @@ public class ManagerGameplay : MonoBehaviour
         List<Vector2Int> moves = new List<Vector2Int>();
         Vector2Int target = Vector2Int.zero;
 
+        //Flying King
         if (Settings.S.flyingKing && board[_x, _y].isPieceKing)
         {
             for (int i = 1; i < Settings.S.boardSize - 1; i++)
@@ -160,7 +161,10 @@ public class ManagerGameplay : MonoBehaviour
                 if (IsPossibleSimple(_x - i, _y + (blackTurn ? -i : i)))
                     moves.Add(new Vector2Int(_x - i, _y + (blackTurn ? -i : i)));
                 else if (IsPossibleCapture(_x - i, _y + (blackTurn ? -i : i), _x - i - 1, _y + (blackTurn ? -i - 1 : i + 1)))
+                {
                     moves.Add(new Vector2Int(_x - i - 1, _y + (blackTurn ? -i - 1 : i + 1)));
+                    break;
+                }
                 else
                     break;
             }
@@ -170,8 +174,11 @@ public class ManagerGameplay : MonoBehaviour
                 //Right
                 if (IsPossibleSimple(_x + i, _y + (blackTurn ? -i : i)))
                     moves.Add(new Vector2Int(_x + i, _y + (blackTurn ? -i : i)));
-                else if (IsPossibleCapture(_x + i, _y + (blackTurn ? -i : i), _x - i - 1, _y + (blackTurn ? -i - 1 : i + 1)))
+                else if (IsPossibleCapture(_x + i, _y + (blackTurn ? -i : i), _x + i + 1, _y + (blackTurn ? -i - 1 : i + 1)))
+                {
                     moves.Add(new Vector2Int(_x + i + 1, _y + (blackTurn ? -i - 1 : i + 1)));
+                    break;
+                }
                 else
                     break;
             }
@@ -182,7 +189,10 @@ public class ManagerGameplay : MonoBehaviour
                 if (IsPossibleSimple(_x - i, _y + (!blackTurn ? -i : i)))
                     moves.Add(new Vector2Int(_x - i, _y + (!blackTurn ? -i : i)));
                 else if (IsPossibleCapture(_x - i, _y + (!blackTurn ? -i : i), _x - i - 1, _y + (!blackTurn ? -i - 1 : i + 1)))
+                {
                     moves.Add(new Vector2Int(_x - i - 1, _y + (!blackTurn ? -i - 1 : i + 1)));
+                    break;
+                }
                 else
                     break;
             }
@@ -192,18 +202,18 @@ public class ManagerGameplay : MonoBehaviour
                 //Right
                 if (IsPossibleSimple(_x + i, _y + (!blackTurn ? -i : i)))
                     moves.Add(new Vector2Int(_x + i, _y + (!blackTurn ? -i : i)));
-                else if (IsPossibleCapture(_x + i, _y + (!blackTurn ? -i : i), _x - i - 1, _y + (!blackTurn ? -i - 1 : i + 1)))
+                else if (IsPossibleCapture(_x + i, _y + (!blackTurn ? -i : i), _x + i + 1, _y + (!blackTurn ? -i - 1 : i + 1)))
+                {
                     moves.Add(new Vector2Int(_x + i + 1, _y + (!blackTurn ? -i - 1 : i + 1)));
+                    break;
+                }
                 else
                     break;
-            }
-            foreach (Vector2Int v in moves)
-            {
-                Debug.Log("x" + v.x + "y" + v.y);
             }
             return moves;
         }
 
+        //Regular
         //Left
         if (IsPossibleSimple(_x - 1, _y + (blackTurn ? -1 : 1))) moves.Add(new Vector2Int(_x - 1, _y + (blackTurn ? -1 : 1)));
         if (IsPossibleCapture(_x - 1, _y + (blackTurn ? -1 : 1), _x - 2, _y + (blackTurn ? -2 : 2))) moves.Add(new Vector2Int(_x - 2, _y + (blackTurn ? -2 : 2)));
@@ -211,6 +221,7 @@ public class ManagerGameplay : MonoBehaviour
         if (IsPossibleSimple(_x + 1, _y + (blackTurn ? -1 : 1))) moves.Add(new Vector2Int(_x + 1, _y + (blackTurn ? -1 : 1)));
         if (IsPossibleCapture(_x + 1, _y + (blackTurn ? -1 : 1), _x + 2, _y + (blackTurn ? -2 : 2))) moves.Add(new Vector2Int(_x + 2, _y + (blackTurn ? -2 : 2)));
 
+        //King
         if (board[_x, _y].isPieceKing)
         {
             //Left
@@ -267,7 +278,7 @@ public class ManagerGameplay : MonoBehaviour
     private bool IsMoveCapture(int _fromX, int _fromY, int _toX, int _toY)
     {
         for (int i = 1; i < Mathf.Abs(_toY - _fromY); i++)
-            if (board[_fromX + (_fromX < _toX ? i : -i), _fromY + (_fromY < _toY ? i : -i)].isPieceBlack != blackTurn) return true;
+            if (board[_fromX + (_fromX < _toX ? i : -i), _fromY + (_fromY < _toY ? i : -i)].pieceTransform != null && board[_fromX + (_fromX < _toX ? i : -i), _fromY + (_fromY < _toY ? i : -i)].isPieceBlack != blackTurn) return true;
 
         return false;
     }
@@ -284,8 +295,18 @@ public class ManagerGameplay : MonoBehaviour
 
         if (IsMoveCapture(selectedPiecePos.x, selectedPiecePos.y, _toX, _toY))
         {
-            Destroy(board[(_toX + selectedPiecePos.x) / 2, (_toY + selectedPiecePos.y) / 2].pieceTransform.gameObject);
-            board[(_toX + selectedPiecePos.x) / 2, (_toY + selectedPiecePos.y) / 2].pieceTransform = null;
+            int capturedX = int.MinValue;
+            int capturedY = int.MinValue;
+
+            for (int i = 1; i < Mathf.Abs(_toY - selectedPiecePos.y); i++)
+                if (board[selectedPiecePos.x + (selectedPiecePos.x < _toX ? i : -i), selectedPiecePos.y + (selectedPiecePos.y < _toY ? i : -i)].pieceTransform != null)
+                {
+                    capturedX = selectedPiecePos.x + (selectedPiecePos.x < _toX ? i : -i);
+                    capturedY = selectedPiecePos.y + (selectedPiecePos.y < _toY ? i : -i);
+                }
+
+            Destroy(board[capturedX, capturedY].pieceTransform.gameObject);
+            board[capturedX, capturedY].pieceTransform = null;
 
             List<Vector2Int> movesAfterCapture = PossibleMoves(_toX, _toY);
 
